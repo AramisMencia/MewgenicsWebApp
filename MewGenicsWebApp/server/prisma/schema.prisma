@@ -8,19 +8,28 @@ datasource db {
 }
 
 model Cat {
-  id                Int      @id @default(autoincrement())
-  name              String
-  gender            Gender
-  orientation       Orientation
-  inbreeding_level  Int
-  color             String
-  status            Status
-  created_at        DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String
+  gender    Gender
+  orientation Orientation
+  inbreeding_level Int
+  color     String
+  status    Status
+  created_at DateTime @default(now())
 
-  stats       CatStats?
-  abilities   CatAbility[]
-  parents     CatParent[] @relation("Child")
-  children    CatParent[] @relation("Parent")
+  stats     CatStats?
+  abilities CatAbility[]
+
+  // 🧬 PADRES
+  motherId Int?
+  fatherId Int?
+
+  mother   Cat? @relation("Mother", fields: [motherId], references: [id])
+  father   Cat? @relation("Father", fields: [fatherId], references: [id])
+
+  // 🧬 HIJOS
+  childrenAsMother Cat[] @relation("Mother")
+  childrenAsFather Cat[] @relation("Father")
 }
 
 model CatStats {
@@ -52,16 +61,6 @@ model CatAbility {
   ability_id Int
 
   @@id([cat_id, ability_id])
-}
-
-model CatParent {
-  child      Cat @relation("Child", fields: [child_id], references: [id])
-  child_id   Int
-
-  parent     Cat @relation("Parent", fields: [parent_id], references: [id])
-  parent_id  Int
-
-  @@id([child_id, parent_id])
 }
 
 enum Gender {

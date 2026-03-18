@@ -5,28 +5,34 @@ const router = Router();
 
 // Crear gato
 router.post("/", async (req, res) => {
+  const {
+    name,
+    gender,
+    orientation,
+    color,
+    motherId,
+    fatherId,
+    stats
+  } = req.body;
+
   try {
-    const {
-      name,
-      gender,
-      orientation,
-      color,
-      stats
-    } = req.body;
-
-    // Validación básica
-    if (!name || !gender || !orientation || !stats) {
-      return res.status(400).json({ error: "Faltan campos obligatorios" });
-    }
-
     const newCat = await prisma.cat.create({
       data: {
         name,
         gender,
         orientation,
-        color: color || "white",
+        color,
         inbreeding_level: 0,
         status: "alive",
+
+        mother: motherId
+          ? { connect: { id: motherId } }
+          : undefined,
+
+        father: fatherId
+          ? { connect: { id: fatherId } }
+          : undefined,
+
         stats: {
           create: {
             strength: stats.strength,
@@ -40,6 +46,8 @@ router.post("/", async (req, res) => {
         }
       },
       include: {
+        mother: true,
+        father: true,
         stats: true
       }
     });
@@ -47,7 +55,7 @@ router.post("/", async (req, res) => {
     res.json(newCat);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error creando gato" });
+    res.status(500).json({ error: "Error creating cat" });
   }
 });
 
