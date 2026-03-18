@@ -127,26 +127,6 @@ router.get("/", async (req, res) => {
     res.json(cats);
 });
 
-// Obtener gato por ID
-router.get("/:id", async (req, res) => {
-    const id = Number(req.params.id);
-
-    const cat = await prisma.cat.findUnique({
-        where: { id },
-        include: {
-            stats: true,
-            mother: true,
-            father: true
-        }
-    });
-
-    if (!cat) {
-        return res.status(404).json({ error: "Gato no encontrado" });
-    }
-
-    res.json(cat);
-});
-
 const getInbreedingPenalty = (a: any, b: any) => {
     // ❌ mismo gato
     if (a.id === b.id) return -100;
@@ -311,6 +291,28 @@ router.get("/matchmaking", async (req, res) => {
         res.status(500).json({ error: "Matchmaking failed" });
     }
 });
+
+// Obtener gato por ID
+router.get("/:id", async (req, res) => {
+    const id = Number(req.params.id);
+
+    const cat = await prisma.cat.findUnique({
+        where: { id },
+        include: {
+            stats: true,
+            mother: true,
+            father: true
+        }
+    });
+
+    if (!cat) {
+        return res.status(404).json({ error: "Gato no encontrado" });
+    }
+
+    res.json(cat);
+});
+
+
 
 
 export default router;
