@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cat {
+  id                Int      @id @default(autoincrement())
+  name              String
+  gender            Gender
+  orientation       Orientation
+  inbreeding_level  Int
+  color             String
+  status            Status
+  created_at        DateTime @default(now())
+
+  stats       CatStats?
+  abilities   CatAbility[]
+  parents     CatParent[] @relation("Child")
+  children    CatParent[] @relation("Parent")
+}
+
+model CatStats {
+  id           Int  @id @default(autoincrement())
+  cat          Cat  @relation(fields: [cat_id], references: [id])
+  cat_id       Int  @unique
+
+  strength      Int
+  dexterity     Int
+  constitution  Int
+  inteligence   Int
+  agility       Int
+  charisma      Int
+  luck          Int
+}
+
+model Ability {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+
+  cats  CatAbility[]
+}
+
+model CatAbility {
+  cat        Cat     @relation(fields: [cat_id], references: [id])
+  cat_id     Int
+
+  ability    Ability @relation(fields: [ability_id], references: [id])
+  ability_id Int
+
+  @@id([cat_id, ability_id])
+}
+
+model CatParent {
+  child      Cat @relation("Child", fields: [child_id], references: [id])
+  child_id   Int
+
+  parent     Cat @relation("Parent", fields: [parent_id], references: [id])
+  parent_id  Int
+
+  @@id([child_id, parent_id])
+}
+
+enum Gender {
+  male
+  female
+  unknown
+}
+
+enum Orientation {
+  hetero
+  homo
+  bi
+}
+
+enum Status {
+  alive
+  retired
+  dead
+}
+
+
+
