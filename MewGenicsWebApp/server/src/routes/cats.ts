@@ -147,6 +147,39 @@ router.get("/:id", async (req, res) => {
     res.json(cat);
 });
 
+const getInbreedingPenalty = (a: any, b: any) => {
+    // ❌ mismo gato
+    if (a.id === b.id) return -100;
+
+    // ❌ padre/hijo
+    if (
+        a.mother_id === b.id ||
+        a.father_id === b.id ||
+        b.mother_id === a.id ||
+        b.father_id === a.id
+    ) return -80;
+
+    // ❌ hermanos (comparten madre o padre)
+    if (
+        (a.mother_id && a.mother_id === b.mother_id) ||
+        (a.father_id && a.father_id === b.father_id)
+    ) return -50;
+
+    // ⚠️ abuelo/nieto (simple)
+    if (
+        a.mother?.mother_id === b.id ||
+        a.mother?.father_id === b.id ||
+        a.father?.mother_id === b.id ||
+        a.father?.father_id === b.id ||
+        b.mother?.mother_id === a.id ||
+        b.mother?.father_id === a.id ||
+        b.father?.mother_id === a.id ||
+        b.father?.father_id === a.id
+    ) return -30;
+
+    return 0;
+};
+
 router.get("/matchmaking", async (req, res) => {
     try {
         const cats = await prisma.cat.findMany({
@@ -156,7 +189,9 @@ router.get("/matchmaking", async (req, res) => {
                 }
             },
             include: {
-                stats: true
+                stats: true,
+                mother: true,
+                father: true
             }
         });
 
@@ -183,19 +218,33 @@ router.get("/matchmaking", async (req, res) => {
         };
 
         const calculateScore = (a: Stats, b: Stats) => {
-            return statKeys.reduce((total, key) => {
+            let score = 0;
+            const reasons: string[] = [];
+
+            for (const key of statKeys) {
                 const statA = a[key];
                 const statB = b[key];
 
                 const avg = (statA + statB) / 2;
-
                 const diff = Math.abs(statA - statB);
 
-                // 🔒 limitar bonus
                 const complementBonus = Math.min(diff, 10) * 0.5;
 
-                return total + avg + complementBonus;
-            }, 0);
+                const totalStatScore = avg + complementBonus;
+                score += totalStatScore;
+
+                // Generar razones para cada stat
+
+                if (avg > 7) {
+                    reasons.push(`High ${key}`);
+                }
+
+                if (diff >= 5) {
+                    reasons.push(`${key} is complementary`);
+                }
+            }
+
+            return { score, reasons };
         };
 
         const results = [];
@@ -210,13 +259,13 @@ router.get("/matchmaking", async (req, res) => {
 
                 if (!statsA || !statsB) continue;
 
-                // 🚫 evitar mismo género (excepto unknown)
+                // Evitar mismo genero (a menos que sea unknown)
                 if (
                     catA.gender === catB.gender &&
                     catA.gender !== "unknown"
                 ) continue;
 
-                // 🚫 evitar parentesco directo
+                // Evitar parentesco cercano
                 if (
                     catA.id === catB.id ||
                     catA.motherId === catB.id ||
@@ -225,12 +274,31 @@ router.get("/matchmaking", async (req, res) => {
                     catB.fatherId === catA.id
                 ) continue;
 
-                const score = calculateScore(statsA as Stats, statsB as Stats);
+                const result = calculateScore(statsA as Stats, statsB as Stats);
+                const penalty = getInbreedingPenalty(catA, catB);
+
+                const score = result.score + penalty;
+
+                let reasons = [...result.reasons];
+
+                if (penalty === 0) {
+                    reasons.push("No close relation");
+                } else if (penalty <= -80) {
+                    reasons.push("Direct relation (bad)");
+                } else if (penalty <= -50) {
+                    reasons.push("Sibling relation");
+                } else if (penalty <= -30) {
+                    reasons.push("Distant relation");
+                }
+
+                //Eliminar duplicados en razones
+                reasons = [...new Set(reasons)];
 
                 results.push({
                     cat1: { id: catA.id, name: catA.name, gender: catA.gender },
                     cat2: { id: catB.id, name: catB.name, gender: catB.gender },
-                    score
+                    score,
+                    reasons
                 });
             }
         }
@@ -243,5 +311,6 @@ router.get("/matchmaking", async (req, res) => {
         res.status(500).json({ error: "Matchmaking failed" });
     }
 });
+
 
 export default router;
