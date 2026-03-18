@@ -31,7 +31,7 @@ model CatStats {
   strength      Int
   dexterity     Int
   constitution  Int
-  inteligence   Int
+  intelligence   Int
   agility       Int
   charisma      Int
   luck          Int
