@@ -1,9 +1,17 @@
 import { Router } from "express";
 import { prisma } from "../prisma";
+import { Cat } from "@prisma/client";
 
 const router = Router();
 
-// Crear gato
+// Validaciones de género para padres
+const canBeMother = (cat: Cat) =>
+  cat.gender === "female" || cat.gender === "unknown";
+
+const canBeFather = (cat: Cat) =>
+  cat.gender === "male" || cat.gender === "unknown";
+
+// Crear ruta post para crear un nuevo gato
 router.post("/", async (req, res) => {
   const {
     name,
@@ -15,7 +23,52 @@ router.post("/", async (req, res) => {
     stats
   } = req.body;
 
+  // Validacion basica
+  if (motherId && fatherId && motherId === fatherId) {
+    return res.status(400).json({
+      error: "Parents must be different"
+    });
+  }
+
   try {
+    // Validacion de existencia y género de padres
+    const parentIds = [motherId, fatherId].filter(Boolean);
+
+    let mother: Cat | undefined;
+    let father: Cat | undefined;
+
+    if (parentIds.length > 0) {
+      const parents = await prisma.cat.findMany({
+        where: {
+          id: { in: parentIds }
+        }
+      });
+
+      mother = parents.find((p: Cat) => p.id === motherId);
+      father = parents.find((p: Cat) => p.id === fatherId);
+
+      if (motherId && !mother) {
+        return res.status(400).json({ error: "Mother not found" });
+      }
+
+      if (fatherId && !father) {
+        return res.status(400).json({ error: "Father not found" });
+      }
+
+      if (mother && !canBeMother(mother)) {
+        return res.status(400).json({
+          error: "Invalid mother"
+        });
+      }
+
+      if (father && !canBeFather(father)) {
+        return res.status(400).json({
+          error: "Invalid father"
+        });
+      }
+    }
+
+    // Crear gato
     const newCat = await prisma.cat.create({
       data: {
         name,
@@ -46,9 +99,9 @@ router.post("/", async (req, res) => {
         }
       },
       include: {
+        stats: true,
         mother: true,
-        father: true,
-        stats: true
+        father: true
       }
     });
 
@@ -59,25 +112,29 @@ router.post("/", async (req, res) => {
   }
 });
 
-// get todos los gatos
+// Obtener todos los gatos
 router.get("/", async (req, res) => {
   const cats = await prisma.cat.findMany({
     include: {
-      stats: true
+      stats: true,
+      mother: true,
+      father: true
     }
   });
 
   res.json(cats);
 });
 
-// get gato por id
+// Obtener gato por ID
 router.get("/:id", async (req, res) => {
   const id = Number(req.params.id);
 
   const cat = await prisma.cat.findUnique({
     where: { id },
     include: {
-      stats: true
+      stats: true,
+      mother: true,
+      father: true
     }
   });
 
