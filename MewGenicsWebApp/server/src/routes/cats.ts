@@ -51,4 +51,33 @@ router.post("/", async (req, res) => {
   }
 });
 
+// get todos los gatos
+router.get("/", async (req, res) => {
+  const cats = await prisma.cat.findMany({
+    include: {
+      stats: true
+    }
+  });
+
+  res.json(cats);
+});
+
+// get gato por id
+router.get("/:id", async (req, res) => {
+  const id = Number(req.params.id);
+
+  const cat = await prisma.cat.findUnique({
+    where: { id },
+    include: {
+      stats: true
+    }
+  });
+
+  if (!cat) {
+    return res.status(404).json({ error: "Gato no encontrado" });
+  }
+
+  res.json(cat);
+});
+
 export default router;
