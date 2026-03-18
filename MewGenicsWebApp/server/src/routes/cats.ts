@@ -162,8 +162,29 @@ const getInbreedingPenalty = (a: any, b: any) => {
 
 
 router.get("/matchmaking", async (req, res) => {
-    
+
+    //Inicio del endpoint de matchmaking
+    const statKeys = [
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "agility",
+        "charisma",
+        "luck"
+    ] as const;
+
+    type StatKey = typeof statKeys[number];
+
+    // Dentro del endpoint de matchmaking
+
     const allowInbreeding = req.query.allowInbreeding === "true";
+
+    const priorityParams = req.query.priority as string | undefined;
+
+    const validStats = statKeys as readonly string[];
+
+    const priorities = priorityParams ? priorityParams.split(",").filter(p => validStats.includes(p)) : [];
 
     try {
         const cats = await prisma.cat.findMany({
@@ -179,18 +200,6 @@ router.get("/matchmaking", async (req, res) => {
             }
         });
 
-        const statKeys = [
-            "strength",
-            "dexterity",
-            "constitution",
-            "intelligence",
-            "agility",
-            "charisma",
-            "luck"
-        ] as const;
-
-        type StatKey = typeof statKeys[number];
-
         type Stats = {
             strength: number;
             dexterity: number;
@@ -203,7 +212,11 @@ router.get("/matchmaking", async (req, res) => {
 
         const BASELINE = 5;
 
-        const calculateScore = (a: Stats, b: Stats) => {
+        const calculateScore = (
+            a: Stats,
+            b: Stats,
+            priorities: readonly string[]
+        ) => {
             let score = 0;
             const reasons: string[] = [];
 
@@ -214,35 +227,40 @@ router.get("/matchmaking", async (req, res) => {
                 const max = Math.max(statA, statB);
                 const min = Math.min(statA, statB);
 
-                // 🧬 mejora potencial
-                const improvement = max - BASELINE;
-
-                // 🧠 qué tanto ayuda uno al otro
+                const improvement = max - 5;
                 const boost = max - min;
 
-                // Score
+                // 🎯 multiplicador si es prioridad
+                const isPriority = priorities.includes(key);
+                const multiplier = isPriority ? 2 : 1;
 
-                // mejora base (stats altos)
-                if (max > BASELINE) {
-                    score += improvement * 2;
+                // 🧮 score base
+                if (max > 5) {
+                    score += improvement * 2 * multiplier;
                 }
 
-                // complementariedad real (uno compensa al otro)
-                score += boost * 1.5;
+                score += boost * 1.5 * multiplier;
 
-                // ⚖️ penalizar si ambos son bajos
-                if (max < BASELINE) {
-                    score -= (BASELINE - max) * 2;
+                if (max < 5) {
+                    score -= (5 - max) * 2;
                 }
 
-                // Razones para matchmaking
+                // 🧾 reasons
 
                 if (boost >= 1) {
-                    reasons.push(`${key} improves by +${boost}`);
+                    reasons.push(
+                        isPriority
+                            ? `${key} improves by +${boost} (PRIORITY)`
+                            : `${key} improves by +${boost}`
+                    );
                 }
 
                 if (max >= 6) {
-                    reasons.push(`${key} reaches strong value (${max})`);
+                    reasons.push(
+                        isPriority
+                            ? `${key} reaches strong value (${max}) (PRIORITY)`
+                            : `${key} reaches strong value (${max})`
+                    );
                 }
 
                 if (max < 5) {
@@ -280,12 +298,12 @@ router.get("/matchmaking", async (req, res) => {
                 //     catB.fatherId === catA.id
                 // ) continue;
 
-                
+
                 const penalty = getInbreedingPenalty(catA, catB);
 
                 if (!allowInbreeding && penalty < 0) continue;
 
-                const result = calculateScore(statsA as Stats, statsB as Stats);
+                const result = calculateScore(statsA as Stats, statsB as Stats, priorities);
 
                 const score = result.score + penalty;
 
