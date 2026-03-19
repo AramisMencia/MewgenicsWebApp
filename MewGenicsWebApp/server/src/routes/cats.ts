@@ -364,9 +364,87 @@ router.get("/matchmaking", async (req, res) => {
     }
 });
 
+
+// Obtener el json exportado
+router.get("/export", async (req, res) => {
+    const cats = await prisma.cat.findMany({
+        include: {
+            stats: true,
+            mother: true,
+            father: true,
+            abilities: true
+        }
+    });
+
+    res.json(cats);
+});
+
+// Subir Json valido
+router.post("/import", async (req, res) => {
+    const data = req.body;
+
+    try {
+        // Borrar todo lo existente
+        await prisma.catAbility.deleteMany();
+        await prisma.catStats.deleteMany();
+        await prisma.cat.deleteMany();
+
+        // Crear nuevos registros
+
+        const idMap = new Map<number, number>();
+
+
+        for (const cat of data) {
+            const created = await prisma.cat.create({
+                data: {
+                    name: cat.name,
+                    gender: cat.gender,
+                    orientation: cat.orientation,
+                    color: cat.color,
+                    status: cat.status,
+                    inbreeding_level: cat.inbreeding_level,
+                    stats: {
+                        create: {
+                            strength: cat.stats.strength,
+                            dexterity: cat.stats.dexterity,
+                            constitution: cat.stats.constitution,
+                            intelligence: cat.stats.intelligence,
+                            agility: cat.stats.agility,
+                            charisma: cat.stats.charisma,
+                            luck: cat.stats.luck
+                        }
+                    }
+                }
+            });
+            idMap.set(cat.id, created.id);
+        }
+        // Actualizar relaciones de padres e hijos
+        for (const cat of data) {
+            const newId = idMap.get(cat.id);
+
+            await prisma.cat.update({
+                where: { id: newId },
+                data: {
+                    motherId: cat.motherId ? idMap.get(cat.motherId) : null,
+                    fatherId: cat.fatherId ? idMap.get(cat.fatherId) : null
+                }
+            });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Import failed" });
+    }
+});
+
 // Obtener gato por ID
 router.get("/:id", async (req, res) => {
     const id = Number(req.params.id);
+
+    if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID" });
+    }
 
     const cat = await prisma.cat.findUnique({
         where: { id },
@@ -386,38 +464,24 @@ router.get("/:id", async (req, res) => {
 
 // Actualizar estado de un gato
 router.put("/:id", async (req, res) => {
-  const id = Number(req.params.id);
-  const { status } = req.body;
+    const id = Number(req.params.id);
+    const { status } = req.body;
 
-  if (!["alive", "retired", "dead"].includes(status)) {
-    return res.status(400).json({ error: "Invalid status" });
-  }
-
-  try {
-    const updatedCat = await prisma.cat.update({
-      where: { id },
-      data: { status },
-    });
-
-    res.json(updatedCat);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to update cat" });
-  }
-});
-
-// GET /cats/export
-router.get("/export", async (req, res) => {
-  const cats = await prisma.cat.findMany({
-    include: {
-      stats: true,
-      mother: true,
-      father: true,
-      abilities: true
+    if (!["alive", "retired", "dead"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
     }
-  });
 
-  res.json(cats);
+    try {
+        const updatedCat = await prisma.cat.update({
+            where: { id },
+            data: { status },
+        });
+
+        res.json(updatedCat);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to update cat" });
+    }
 });
 
 export default router;

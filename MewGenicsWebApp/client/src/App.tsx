@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import Matchmaking from "./pages/Matchmaking";
 import Genealogy from "./pages/Genealogy";
 import CreateCat from "./pages/CreateCat";
+import DataManager from "./pages/DataManager";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<Genealogy />} />
           <Route path="/matchmaking" element={<Matchmaking />} />
           <Route path="/create" element={<CreateCat />} />
+          <Route path="/data" element={<DataManager />} />
         </Routes>
       </div>
     </div>

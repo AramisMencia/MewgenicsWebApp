@@ -22,6 +22,12 @@ const Navbar = () => {
       >
         Nuevo gato
       </Link>
+      <Link 
+        to="/data" 
+        className="hover:bg-gray-700 px-4 py-2 rounded transition"
+      >
+        Datos
+      </Link>
     </header>
   );
 };
