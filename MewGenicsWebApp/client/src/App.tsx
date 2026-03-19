@@ -6,14 +6,16 @@ import CreateCat from "./pages/CreateCat";
 
 function App() {
   return (
-    <>
+    <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Genealogy />} />
-        <Route path="/matchmaking" element={<Matchmaking />} />
-        <Route path="/create" element={<CreateCat />} />
-      </Routes>
-    </>
+      <div className="flex-1 overflow-hidden">
+        <Routes>
+          <Route path="/" element={<Genealogy />} />
+          <Route path="/matchmaking" element={<Matchmaking />} />
+          <Route path="/create" element={<CreateCat />} />
+        </Routes>
+      </div>
+    </div>
   );
 }
 

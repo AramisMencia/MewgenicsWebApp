@@ -1,19 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
+import type { Cat, CatStatus } from "../Types/Cats";
 
-export type CatStatus = "alive" | "retired" | "dead";
-
-export interface Cat {
-    id: number;
-    name: string;
-    motherId?: number | null;
-    fatherId?: number | null;
-    status: CatStatus;
-    mother?: Cat | null;
-    father?: Cat | null;
-}
-
-// Tipo extendido para D3 con children
 interface CatWithChildren extends Cat {
     children?: CatWithChildren[];
 }
@@ -23,6 +11,7 @@ type CatNode = d3.HierarchyNode<CatWithChildren>;
 const Genealogy: React.FC = () => {
     const [cats, setCats] = useState<Cat[]>([]);
     const svgRef = useRef<SVGSVGElement | null>(null);
+    const gRef = useRef<SVGGElement | null>(null);
 
     // Fetch gatos desde backend
     useEffect(() => {
@@ -57,18 +46,30 @@ const Genealogy: React.FC = () => {
         }
     };
 
-    // D3 tree render
+    // D3 tree render con zoom y drag
     useEffect(() => {
         if (!cats.length || !svgRef.current) return;
 
-        const width = 900;
-        const height = 600;
+        const width = svgRef.current.clientWidth;
+        const height = svgRef.current.clientHeight;
 
         const svg = d3.select(svgRef.current);
-        svg.selectAll("*").remove(); // Limpiar antes de render
+        svg.selectAll("*").remove(); // limpiar
+
+        // Grupo para zoom
+        const g = svg.append("g");
+        gRef.current = g.node() as SVGGElement; // opcional si quieres guardar la referencia en React
 
         // Convertir lista plana a jerarquía
-        const root: CatWithChildren = { id: 0, name: "Raíz", status: "alive", children: [] };
+        const root: CatWithChildren = {
+            id: 0,
+            name: "Raíz",
+            gender: "unknown",
+            orientation: "hetero",
+            color: "#ffffff",
+            status: "alive",
+            children: []
+        };
         const idToNode: Record<number, CatWithChildren> = {};
 
         cats.forEach(cat => {
@@ -85,61 +86,59 @@ const Genealogy: React.FC = () => {
         });
 
         const d3Root = d3.hierarchy<CatWithChildren>(root, d => d.children);
-        const treeLayout = d3.tree<CatWithChildren>().size([width - 100, height - 100]);
+        const treeLayout = d3.tree<CatWithChildren>().size([width, height]);
         treeLayout(d3Root);
 
         // Links
-        svg
-            .append("g")
+        g.append("g")
             .selectAll("line")
             .data(d3Root.links())
             .join("line")
-            .attr("x1", d => (d.source.x ?? 0) + 50)  // fallback 0 si undefined
-            .attr("y1", d => (d.source.y ?? 0) + 50)
-            .attr("x2", d => (d.target.x ?? 0) + 50)
-            .attr("y2", d => (d.target.y ?? 0) + 50)
+            .attr("x1", d => d.source.x ?? 0)
+            .attr("y1", d => d.source.y ?? 0)
+            .attr("x2", d => d.target.x ?? 0)
+            .attr("y2", d => d.target.y ?? 0)
             .attr("stroke", "#999");
 
         // Nodos
-        const nodes = svg
-            .append("g")
+        const nodes = g.append("g")
             .selectAll("g")
             .data(d3Root.descendants())
             .join("g")
-            .attr("transform", d => `translate(${d.x ?? 0 + 50},${d.y ?? 0 + 50})`);
+            .attr("transform", d => `translate(${d.x},${d.y})`);
 
-        nodes
-            .append("circle")
-            .attr("r", 20)
+        const nodeWidth = 80;
+        const nodeHeight = 40;
+
+        // Rectángulos
+        nodes.append("rect")
+            .attr("x", -nodeWidth / 2)
+            .attr("y", -nodeHeight / 2)
+            .attr("width", nodeWidth)
+            .attr("height", nodeHeight)
+            .attr("rx", 8)
+            .attr("ry", 8)
             .attr("fill", d => {
-                if (d.data.status === "retired") return "#a0aec0"; // gris
-                if (d.data.status === "dead") return "#e53e3e"; // rojo
-                return "#48bb78"; // verde
+                if (d.data.status === "alive") return "#48bb78";   // verde
+                if (d.data.status === "retired") return "#ffffff"; // blanco
+                return "#4a5568"; // gris oscuro
             })
             .attr("stroke", "#333");
 
-        // Corona si retired
-        nodes
-            .filter(d => d.data.status === "retired")
-            .append("text")
-            .text("👑")
-            .attr("y", -30)
-            .attr("text-anchor", "middle");
-
-        // Nombre del gato
-        nodes
-            .append("text")
+        // Nombre
+        nodes.append("text")
             .text(d => d.data.name)
-            .attr("y", 5)
             .attr("text-anchor", "middle")
-            .attr("fill", "#000");
+            .attr("dominant-baseline", "middle")
+            .attr("fill", d => d.data.status === "retired" ? "#333" : "#fff")
+            .attr("font-size", "12px")
+            .style("pointer-events", "none"); // evitar bloquear el dropdown
 
-        // Dropdown para cambiar estado
-        nodes
-            .append("foreignObject")
-            .attr("x", -40)
-            .attr("y", 25)
-            .attr("width", 80)
+        // Dropdown
+        nodes.append("foreignObject")
+            .attr("x", -nodeWidth / 2)
+            .attr("y", nodeHeight / 2 + 5)
+            .attr("width", nodeWidth)
             .attr("height", 30)
             .append("xhtml:select")
             .on("change", (event: Event, d: CatNode) => {
@@ -152,13 +151,22 @@ const Genealogy: React.FC = () => {
             .join("option")
             .attr("value", d => d)
             .text(d => d)
-            .property("selected", d => d === d3Root.data.status);
+            .property("selected", d => d === "alive");
+
+        // Zoom + Drag
+        const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
+            .scaleExtent([0.5, 3])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform.toString());
+            });
+
+        svg.call(zoomBehavior);
 
     }, [cats]);
 
     return (
-        <div className="overflow-auto">
-            <svg ref={svgRef} width={900} height={600} className="border" />
+        <div className="w-full h-full overflow-hidden flex justify-center items-center bg-gray-100">
+            <svg ref={svgRef} className="w-full h-full border" />
         </div>
     );
 };
