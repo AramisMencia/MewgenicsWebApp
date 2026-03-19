@@ -8,7 +8,6 @@ function App() {
   return (
     <>
       <Navbar />
-
       <Routes>
         <Route path="/" element={<Genealogy />} />
         <Route path="/matchmaking" element={<Matchmaking />} />

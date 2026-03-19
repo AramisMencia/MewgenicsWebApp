@@ -1,16 +1,29 @@
-import { Link } from "react-router-dom";
 
-export default function Navbar() {
+import { Link } from 'react-router-dom';
+
+const Navbar = () => {
   return (
-    <nav style={{
-      display: "flex",
-      gap: "20px",
-      padding: "10px",
-      borderBottom: "1px solid gray"
-    }}>
-      <Link to="/">Arbol Genealogico</Link>
-      <Link to="/matchmaking">Matchmaking</Link>
-      <Link to="/create">Nuevo Gato</Link>
-    </nav>
+    <header className="bg-gray-800 text-white shadow-md p-4 flex justify-center space-x-6">
+      <Link 
+        to="/" 
+        className="hover:bg-gray-700 px-4 py-2 rounded transition"
+      >
+        Árbol genealógico
+      </Link>
+      <Link 
+        to="/matchmaking" 
+        className="hover:bg-gray-700 px-4 py-2 rounded transition"
+      >
+        Matchmaking
+      </Link>
+      <Link 
+        to="/create" 
+        className="hover:bg-gray-700 px-4 py-2 rounded transition"
+      >
+        Nuevo gato
+      </Link>
+    </header>
   );
-}
+};
+
+export default Navbar;
