@@ -145,7 +145,7 @@ const getInbreedingPenalty = (a: any, b: any) => {
         (a.fatherId && a.fatherId === b.fatherId)
     ) return -50;
 
-    // abuelos (simple)
+    // abuelos
     if (
         a.mother?.motherId === b.id ||
         a.mother?.fatherId === b.id ||
@@ -231,7 +231,7 @@ router.get("/matchmaking", async (req, res) => {
                 const improvement = max - 5;
                 const boost = max - min;
 
-                // 🎯 multiplicador si es prioridad
+                // multiplicador si es prioridad
                 const isPriority = priorities.includes(key);
                 const multiplier = isPriority ? 2 : 1;
 
