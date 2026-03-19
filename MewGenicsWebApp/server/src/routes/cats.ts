@@ -186,6 +186,7 @@ router.get("/matchmaking", async (req, res) => {
 
     const priorities = priorityParams ? priorityParams.split(",").filter(p => validStats.includes(p)) : [];
 
+
     try {
         const cats = await prisma.cat.findMany({
             where: {
@@ -309,6 +310,35 @@ router.get("/matchmaking", async (req, res) => {
 
                 let reasons = [...result.reasons];
 
+                const predictChild = (a: Stats, b: Stats): Stats => {
+                    const result = {} as Stats;
+
+                    for (const key of statKeys) {
+                        result[key] = Math.max(a[key], b[key]);
+                    }
+
+                    return result;
+                };
+
+                const predictedChild = predictChild(statsA as Stats, statsB as Stats);
+
+                const improvements = statKeys
+                    .filter(key => {
+                        const max = Math.max(statsA[key], statsB[key]);
+                        const min = Math.min(statsA[key], statsB[key]);
+
+                        return max > min; // hay mejora genética
+                    })
+                    .map(key => {
+                        const max = Math.max(statsA[key], statsB[key]);
+                        const min = Math.min(statsA[key], statsB[key]);
+
+                        return {
+                            stat: key,
+                            improvement: max - min
+                        };
+                    });
+
                 if (penalty === 0) {
                     reasons.push("No close relation");
                 } else if (penalty <= -80) {
@@ -327,7 +357,9 @@ router.get("/matchmaking", async (req, res) => {
                     cat2: { id: catB.id, name: catB.name, gender: catB.gender },
                     score,
                     penalty,
-                    reasons
+                    reasons,
+                    predictedChild,
+                    improvements
                 });
             }
         }
