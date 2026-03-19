@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Match } from "../Types/Cats";
 import MatchCard from "../components/MatchCard";
 import CheckboxGroup from "../components/CheckboxGroup";
