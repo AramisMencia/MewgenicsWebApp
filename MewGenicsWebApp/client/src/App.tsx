@@ -8,7 +8,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">
       <Navbar />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         <Routes>
           <Route path="/" element={<Genealogy />} />
           <Route path="/matchmaking" element={<Matchmaking />} />

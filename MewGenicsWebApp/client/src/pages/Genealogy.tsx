@@ -136,22 +136,29 @@ const Genealogy: React.FC = () => {
 
         // Dropdown
         nodes.append("foreignObject")
-            .attr("x", -nodeWidth / 2)
-            .attr("y", nodeHeight / 2 + 5)
-            .attr("width", nodeWidth)
+            .attr("x", -40)
+            .attr("y", 25)
+            .attr("width", 80)
             .attr("height", 30)
             .append("xhtml:select")
-            .on("change", (event: Event, d: CatNode) => {
+            .attr("class", "w-full bg-gray-800 text-white rounded p-1 border border-gray-600")
+            .on("change", (event: Event, nodeData: CatNode) => {
                 const target = event.target as HTMLSelectElement;
                 const newStatus = target.value as CatStatus;
-                updateCatStatus(d.data.id, newStatus);
+                updateCatStatus(nodeData.data.id, newStatus);
             })
-            .selectAll("option")
-            .data(["alive", "retired", "dead"])
-            .join("option")
-            .attr("value", d => d)
-            .text(d => d)
-            .property("selected", d => d === "alive");
+            .each(function (nodeData: CatNode) {
+                // 'nodeData' es el nodo del gato actual
+                const select = d3.select(this);
+                const options = ["alive", "retired", "dead"];
+                select
+                    .selectAll("option")
+                    .data(options)
+                    .join("option")
+                    .attr("value", d => d)
+                    .text(d => d)
+                    .property("selected", d => d === nodeData.data.status);
+            });
 
         // Zoom + Drag
         const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
@@ -160,13 +167,14 @@ const Genealogy: React.FC = () => {
                 g.attr("transform", event.transform.toString());
             });
 
+
         svg.call(zoomBehavior);
 
     }, [cats]);
 
     return (
         <div className="w-full h-full overflow-hidden flex justify-center items-center bg-gray-100">
-            <svg ref={svgRef} className="w-full h-full border" />
+            <svg ref={svgRef} className="border bg-gray-900 w-full h-full" />
         </div>
     );
 };

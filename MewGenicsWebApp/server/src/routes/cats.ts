@@ -384,7 +384,27 @@ router.get("/:id", async (req, res) => {
     res.json(cat);
 });
 
+// Actualizar estado de un gato
+router.put("/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { status } = req.body;
 
+  if (!["alive", "retired", "dead"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+
+  try {
+    const updatedCat = await prisma.cat.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.json(updatedCat);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to update cat" });
+  }
+});
 
 
 export default router;
