@@ -406,5 +406,18 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+// GET /cats/export
+router.get("/export", async (req, res) => {
+  const cats = await prisma.cat.findMany({
+    include: {
+      stats: true,
+      mother: true,
+      father: true,
+      abilities: true
+    }
+  });
+
+  res.json(cats);
+});
 
 export default router;
