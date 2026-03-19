@@ -235,7 +235,7 @@ router.get("/matchmaking", async (req, res) => {
                 const isPriority = priorities.includes(key);
                 const multiplier = isPriority ? 2 : 1;
 
-                // 🧮 score base
+                // score de base
                 if (max > 5) {
                     score += improvement * 2 * multiplier;
                 }
@@ -246,7 +246,7 @@ router.get("/matchmaking", async (req, res) => {
                     score -= (5 - max) * 2;
                 }
 
-                // 🧾 reasons
+                // razones para el matchmaking
 
                 if (boost >= 1) {
                     reasons.push(
@@ -289,15 +289,6 @@ router.get("/matchmaking", async (req, res) => {
                     catA.gender === catB.gender &&
                     catA.gender !== "unknown"
                 ) continue;
-
-                // Evitar parentesco cercano
-                // if (
-                //     catA.id === catB.id ||
-                //     catA.motherId === catB.id ||
-                //     catA.fatherId === catB.id ||
-                //     catB.motherId === catA.id ||
-                //     catB.fatherId === catA.id
-                // ) continue;
 
 
                 const penalty = getInbreedingPenalty(catA, catB);
