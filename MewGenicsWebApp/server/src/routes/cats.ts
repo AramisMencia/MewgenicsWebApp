@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma";
 import { Cat } from "@prisma/client";
+import { catCreateSchema } from "../validators/cats";
 
 const router = Router();
 
@@ -15,6 +16,13 @@ const canBeFather = (cat: Cat) =>
 
 // Crear ruta post para crear un nuevo gato
 router.post("/", async (req, res) => {
+
+    const parsed = catCreateSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.flatten() });
+    }
+
     const {
         name,
         gender,
@@ -23,7 +31,7 @@ router.post("/", async (req, res) => {
         motherId,
         fatherId,
         stats
-    } = req.body;
+    } = parsed.data;
 
     // Validacion basica
     if (motherId && fatherId && motherId === fatherId) {
@@ -34,7 +42,9 @@ router.post("/", async (req, res) => {
 
     try {
         // Validacion de existencia y género de padres
-        const parentIds = [motherId, fatherId].filter(Boolean);
+        const parentIds = [motherId, fatherId].filter(
+            (id): id is number => typeof id === "number"
+        );
 
         let mother: Cat | undefined;
         let father: Cat | undefined;
@@ -160,7 +170,7 @@ const getInbreedingPenalty = (a: any, b: any) => {
     return 0;
 };
 
-
+// Obtener matchmaking
 router.get("/matchmaking", async (req, res) => {
 
     //Inicio del endpoint de matchmaking
@@ -274,6 +284,10 @@ router.get("/matchmaking", async (req, res) => {
 
         const results = [];
 
+        if (cats.length > 200) {
+            return res.status(400).json({ error: "Too many cats for matchmaking" });
+        }
+
         for (let i = 0; i < cats.length; i++) {
             for (let j = i + 1; j < cats.length; j++) {
                 const catA = cats[i];
@@ -364,7 +378,6 @@ router.get("/matchmaking", async (req, res) => {
     }
 });
 
-
 // Obtener el json exportado
 router.get("/export", async (req, res) => {
     const cats = await prisma.cat.findMany({
@@ -384,13 +397,28 @@ router.post("/import", async (req, res) => {
     const data = req.body;
 
     try {
+        if (!Array.isArray(data)) {
+            return res.status(400).json({ error: "Invalid format" });
+        }
+
+        if (data.length > 500) {
+            return res.status(400).json({ error: "Too many cats" });
+        }
+
+        for (const cat of data) {
+            const parsed = catCreateSchema.safeParse(cat);
+
+            if (!parsed.success) {
+                return res.status(400).json({ error: "Invalid cat in JSON" });
+            }
+        }
+
         // Borrar todo lo existente
         await prisma.catAbility.deleteMany();
         await prisma.catStats.deleteMany();
         await prisma.cat.deleteMany();
 
         // Crear nuevos registros
-
         const idMap = new Map<number, number>();
 
 
@@ -430,7 +458,7 @@ router.post("/import", async (req, res) => {
                 }
             });
         }
-        
+
         res.json({ success: true });
     } catch (error) {
         console.error(error);
@@ -441,6 +469,10 @@ router.post("/import", async (req, res) => {
 // Obtener gato por ID
 router.get("/:id", async (req, res) => {
     const id = Number(req.params.id);
+
+    if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Invalid ID" });
+    }
 
     if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid ID" });
@@ -466,6 +498,11 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
     const id = Number(req.params.id);
     const { status } = req.body;
+
+    if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Invalid ID" });
+    }
+
 
     if (!["alive", "retired", "dead"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
