@@ -12,7 +12,7 @@ const MatchCard: React.FC<Props> = ({ match, onClick, selected }) => {
     <div
       onClick={onClick}
       className={`p-3 mb-2 border rounded cursor-pointer transition bg-gray-900 text-white${
-        selected ? "bg-blue-100 border-blue-400 bg-gray-200 text-black" : "bg-white hover:bg-gray-100 hover:text-black"
+        selected ? "bg-blue-100 border-blue-400 bg-gray-300 text-black" : "bg-white hover:bg-gray-100 hover:text-black"
       }`}
     >
       <div className="font-semibold">

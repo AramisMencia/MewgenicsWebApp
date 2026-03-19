@@ -12,6 +12,7 @@ const Genealogy: React.FC = () => {
     const [cats, setCats] = useState<Cat[]>([]);
     const svgRef = useRef<SVGSVGElement | null>(null);
     const gRef = useRef<SVGGElement | null>(null);
+    const zoomRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
 
     // Fetch gatos desde backend
     useEffect(() => {
@@ -46,19 +47,26 @@ const Genealogy: React.FC = () => {
         }
     };
 
-    // D3 tree render con zoom y drag
+    // D3 tree render + zoom y drag
     useEffect(() => {
+
+        const getNodeWidth = (name: string) => {
+            const base = 60;
+            const charWidth = 8;
+            return Math.max(base, name.length * charWidth + 40);
+        };
+
         if (!cats.length || !svgRef.current) return;
 
         const width = svgRef.current.clientWidth;
-        const height = svgRef.current.clientHeight;
+        // const height = svgRef.current.clientHeight;
 
         const svg = d3.select(svgRef.current);
-        svg.selectAll("*").remove(); // limpiar
+        svg.selectAll("*").remove();
 
         // Grupo para zoom
         const g = svg.append("g");
-        gRef.current = g.node() as SVGGElement; // opcional si quieres guardar la referencia en React
+        gRef.current = g.node() as SVGGElement;
 
         // Convertir lista plana a jerarquía
         const root: CatWithChildren = {
@@ -86,13 +94,29 @@ const Genealogy: React.FC = () => {
         });
 
         const d3Root = d3.hierarchy<CatWithChildren>(root, d => d.children);
-        const treeLayout = d3.tree<CatWithChildren>().size([width, height]);
+        const treeLayout = d3.tree<CatWithChildren>().nodeSize([180, 140]);
         treeLayout(d3Root);
+
+        const nodesArray = d3Root.descendants();
+
+        // calcular límites
+        const minX = d3.min(nodesArray, d => d.x) ?? 0;
+        const maxX = d3.max(nodesArray, d => d.x) ?? 0;
+
+        // centrar horizontalmente
+        const offsetX = width / 2 - (minX + maxX) / 2;
+
+        // mover todo el árbol
+        nodesArray.forEach((node: d3.HierarchyNode<CatWithChildren>) => {
+            node.x = (node.x ?? 0) + offsetX;
+            node.y = (node.y ?? 0) + 80;
+        });
+
 
         // Links
         g.append("g")
             .selectAll("line")
-            .data(d3Root.links())
+            .data(d3Root.links().filter(link => link.source.data.id !== 0))
             .join("line")
             .attr("x1", d => d.source.x ?? 0)
             .attr("y1", d => d.source.y ?? 0)
@@ -103,52 +127,75 @@ const Genealogy: React.FC = () => {
         // Nodos
         const nodes = g.append("g")
             .selectAll("g")
-            .data(d3Root.descendants())
+            .data(d3Root.descendants().slice(1))
             .join("g")
             .attr("transform", d => `translate(${d.x},${d.y})`);
 
-        const nodeWidth = 80;
-        const nodeHeight = 40;
+        nodes.each(function (d) {
+            (d as any).nodeWidth = getNodeWidth(d.data.name);
+        });
+
+        // const nodeWidth = 120;
+        const nodeHeight = 100;
 
         // Rectángulos
+        // Rectángulo principal (color del gato)
         nodes.append("rect")
-            .attr("x", -nodeWidth / 2)
+            .attr("x", d => -((d as any).nodeWidth / 2))
             .attr("y", -nodeHeight / 2)
-            .attr("width", nodeWidth)
+            .attr("width", d => (d as any).nodeWidth)
             .attr("height", nodeHeight)
-            .attr("rx", 8)
-            .attr("ry", 8)
-            .attr("fill", d => {
-                if (d.data.status === "alive") return "#48bb78";   // verde
-                if (d.data.status === "retired") return "#ffffff"; // blanco
-                return "#4a5568"; // gris oscuro
-            })
-            .attr("stroke", "#333");
+            .attr("rx", 10)
+            .attr("fill", d => d.data.color || "#888")
+            .attr("stroke", "#222");
+
+        //Rectangulo del nombre
+        nodes.append("rect")
+            .attr("x", d => -((d as any).nodeWidth / 2) + 8)
+            .attr("y", -nodeHeight / 2 + 28)
+            .attr("width", d => (d as any).nodeWidth - 16)
+            .attr("height", 24)
+            .attr("rx", 6)
+            .attr("fill", "#f3f4f6")
+            .attr("stroke", "#ccc");
 
         // Nombre
         nodes.append("text")
             .text(d => d.data.name)
             .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
-            .attr("fill", d => d.data.status === "retired" ? "#333" : "#fff")
-            .attr("font-size", "12px")
-            .style("pointer-events", "none"); // evitar bloquear el dropdown
+            .attr("x", 0)
+            .attr("y", -nodeHeight / 2 + 45)
+            .attr("fill", "#000")
+            .attr("font-size", "13px")
+            .attr("font-weight", "bold");
+
+        // icono de estado
+        nodes.append("text")
+            .text(d => {
+                if (d.data.status === "alive") return "❤️";
+                if (d.data.status === "retired") return "👑";
+                return "💀";
+            })
+            .attr("text-anchor", "middle")
+            .attr("x", 0)
+            .attr("y", -nodeHeight / 2 + 18)
+            .attr("font-size", "18px");
+
 
         // Dropdown
         nodes.append("foreignObject")
-            .attr("x", -40)
-            .attr("y", 25)
-            .attr("width", 80)
-            .attr("height", 30)
+            .attr("x", d => -((d as any).nodeWidth / 2) + 8)
+            .attr("y", -nodeHeight / 2 + 58)
+            .attr("width", d => (d as any).nodeWidth - 16)
+            .attr("height", 26)
             .append("xhtml:select")
-            .attr("class", "w-full bg-gray-800 text-white rounded p-1 border border-gray-600")
+            .attr("class", "w-full bg-gray-800 text-white rounded text-xs border border-gray-600 px-1")
             .on("change", (event: Event, nodeData: CatNode) => {
                 const target = event.target as HTMLSelectElement;
                 const newStatus = target.value as CatStatus;
                 updateCatStatus(nodeData.data.id, newStatus);
             })
             .each(function (nodeData: CatNode) {
-                // 'nodeData' es el nodo del gato actual
                 const select = d3.select(this);
                 const options = ["alive", "retired", "dead"];
                 select
@@ -164,11 +211,13 @@ const Genealogy: React.FC = () => {
         const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.5, 3])
             .on("zoom", (event) => {
+                zoomRef.current = event.transform;
                 g.attr("transform", event.transform.toString());
             });
 
-
         svg.call(zoomBehavior);
+
+        svg.call(zoomBehavior.transform, zoomRef.current);
 
     }, [cats]);
 

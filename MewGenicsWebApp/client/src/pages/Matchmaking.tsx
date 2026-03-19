@@ -25,7 +25,7 @@ export default function Matchmaking() {
       const data: Match[] = await res.json();
       setMatches(data);
       setSelectedMatch(data[0] ?? null);
-      setCurrentPage(1); // reset page al cambiar filtros
+      setCurrentPage(1);
     };
     fetchMatches();
   }, [allowInbreeding, priorityStats]);
@@ -38,7 +38,7 @@ export default function Matchmaking() {
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
-      {/* FILTROS (SIEMPRE FIJOS) */}
+      {/* Filtros */}
       <div className="flex flex-wrap gap-4 p-4 border-b border-gray-700 flex-shrink-0">
         <label className="flex items-center space-x-1">
           <input
@@ -60,11 +60,11 @@ export default function Matchmaking() {
         </div>
       </div>
 
-      {/* CONTENIDO */}
+      {/* Contenido */}
       <div className="flex flex-1 overflow-hidden">
-        {/* IZQUIERDA */}
+        {/* Izquierda */}
         <div className="w-1/3 border-r border-gray-700 flex flex-col">
-          {/* LISTA (SCROLL REAL) */}
+          {/* Lista + Scroll */}
           <div className="flex-1 overflow-y-auto p-4">
             {pagedMatches.map((m) => (
               <MatchCard
@@ -76,7 +76,7 @@ export default function Matchmaking() {
             ))}
           </div>
 
-          {/* PAGINACION (SIEMPRE VISIBLE) */}
+          {/* Paginacion */}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 p-2 border-t border-gray-700 flex-shrink-0 bg-gray-900">
               {Array.from({ length: totalPages }, (_, i) => (
@@ -95,7 +95,7 @@ export default function Matchmaking() {
           )}
         </div>
 
-        {/* DERECHA */}
+        {/* Derecha */}
         <div className="w-2/3 flex flex-col">
           <div className="flex-1 overflow-y-auto p-4">
             {selectedMatch ? (
