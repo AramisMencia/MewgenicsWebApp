@@ -1,11 +1,12 @@
 import React, { useRef } from "react";
+import { API_URL } from "../config";
 
 export default function DataManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // DESCARGAR
   const handleExport = async () => {
-    const res = await fetch("/api/cats/export");
+    const res = await fetch(`${API_URL}/cats/export`);
     const data = await res.json();
 
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -27,7 +28,7 @@ export default function DataManager() {
     const text = await file.text();
     const json = JSON.parse(text);
 
-    await fetch("/api/cats/import", {
+    await fetch(`${API_URL}/cats/import`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

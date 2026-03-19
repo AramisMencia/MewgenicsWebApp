@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { Cat, CatStats } from "../Types/Cats";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../config";
 
 const defaultStats: CatStats = {
   strength: 5,
@@ -31,7 +32,7 @@ export default function CreateCat() {
   useEffect(() => {
     const fetchCats = async () => {
       try {
-        const res = await fetch("/api/cats");
+        const res = await fetch(`${API_URL}/cats`);
         const data = await res.json();
         setCats(data);
       } catch (err) {
@@ -83,7 +84,7 @@ export default function CreateCat() {
     };
 
     try {
-      const res = await fetch("/api/cats", {
+      const res = await fetch(`${API_URL}/cats`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

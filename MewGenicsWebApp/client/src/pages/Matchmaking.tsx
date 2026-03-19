@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { Match } from "../Types/Cats";
 import MatchCard from "../components/MatchCard";
 import CheckboxGroup from "../components/CheckboxGroup";
+import { API_URL } from "../config";
 
 const statsKeys: (keyof Match["predictedChild"])[] = [
   "strength", "dexterity", "constitution", "intelligence", "agility", "charisma", "luck"
@@ -21,7 +22,7 @@ export default function Matchmaking() {
       const params = new URLSearchParams();
       if (allowInbreeding) params.append("allowInbreeding", "true");
       if (priorityStats.length) params.append("priority", priorityStats.join(","));
-      const res = await fetch(`/api/cats/matchmaking?${params.toString()}`);
+      const res = await fetch(`${API_URL}/cats/matchmaking?${params.toString()}`);
       const data: Match[] = await res.json();
       setMatches(data);
       setSelectedMatch(data[0] ?? null);
