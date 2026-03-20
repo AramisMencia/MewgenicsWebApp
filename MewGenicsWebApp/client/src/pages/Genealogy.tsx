@@ -47,14 +47,14 @@ const Genealogy: React.FC = () => {
     // DELETE CAT
     const deleteCat = async (catId: number) => {
         try {
-            const res = await fetch(`/api/cats/${catId}?worldId=${worldId}`, {
+            const res = await fetch(`${API_URL}/cats/${catId}?worldId=${worldId}`, {
                 method: "DELETE",
             });
 
             if (!res.ok) throw new Error("Failed to delete cat");
 
             // 🔄 RE-FETCH (clave)
-            const updated = await fetch(`/api/cats?worldId=${worldId}`);
+            const updated = await fetch(`${API_URL}/cats?worldId=${worldId}`);
             const data: Cat[] = await updated.json();
 
             setCats(data);
@@ -218,6 +218,7 @@ const Genealogy: React.FC = () => {
                 .text(d => d)
                 .property("selected", d => d === cat.status);
 
+            // Botón de eliminar
             group.append("foreignObject")
                 .attr("x", nodeWidth / 2 - 20)
                 .attr("y", -nodeHeight / 2 + 5)
