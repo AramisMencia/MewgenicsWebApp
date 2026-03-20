@@ -32,7 +32,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log("Server corriendo en http://localhost:3000");
+  console.log("Server corriendo Railway en puerto 3000");
 });
 
 process.on("uncaughtException", (err) => {
