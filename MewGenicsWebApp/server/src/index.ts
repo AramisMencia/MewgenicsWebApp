@@ -42,3 +42,5 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled:", err);
 });
+
+//Numero de intentos: 30
