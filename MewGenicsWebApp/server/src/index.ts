@@ -20,7 +20,9 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "https://mewgenics-web-app.vercel.app/"
-  ]
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
 }));
 
 app.use("/cats", catsRouter);
