@@ -12,6 +12,7 @@ const limiter = rateLimit({
 const app = express();
 
 app.use(express.json({ limit: "1mb" }));
+app.set("trust proxy", 1);
 app.use(limiter);
 app.use(helmet());
 

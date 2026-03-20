@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import type { Cat, CatStats } from "../Types/Cats";
 import { useNavigate } from "react-router-dom";
-import { API_URL } from "../config";
+import { API_URL, getWorldId } from "../config";
+
+const worldId = getWorldId();
 
 const defaultStats: CatStats = {
   strength: 5,
@@ -32,7 +34,7 @@ export default function CreateCat() {
   useEffect(() => {
     const fetchCats = async () => {
       try {
-        const res = await fetch(`${API_URL}/cats`);
+        const res = await fetch(`${API_URL}/cats?worldId=${worldId}`);
         const data = await res.json();
         setCats(data);
       } catch (err) {
@@ -80,7 +82,8 @@ export default function CreateCat() {
       color,
       motherId: motherId === "none" ? undefined : motherId,
       fatherId: fatherId === "none" ? undefined : fatherId,
-      stats
+      stats,
+      worldId 
     };
 
     try {
@@ -89,7 +92,7 @@ export default function CreateCat() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error("Error creando gato");

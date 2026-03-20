@@ -15,6 +15,7 @@ export const catCreateSchema = z.object({
   gender: z.enum(["male", "female", "unknown"]),
   orientation: z.enum(["hetero", "homo", "bi"]),
   color: z.string().regex(/^#([0-9a-fA-F]{6})$/),
+  worldId: z.string(),
   motherId: z.number().int().optional().nullable(),
   fatherId: z.number().int().optional().nullable(),
   stats: statsSchema

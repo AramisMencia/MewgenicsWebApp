@@ -9,6 +9,7 @@ datasource db {
 
 model Cat {
   id        Int      @id @default(autoincrement())
+
   name      String
   gender    Gender
   orientation Orientation
@@ -16,6 +17,8 @@ model Cat {
   color     String
   status    Status
   created_at DateTime @default(now())
+
+  worldId   String
 
   stats     CatStats?
   abilities CatAbility[]

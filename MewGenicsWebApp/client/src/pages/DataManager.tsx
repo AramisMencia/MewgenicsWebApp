@@ -1,12 +1,14 @@
 import React, { useRef } from "react";
-import { API_URL } from "../config";
+import { API_URL, getWorldId } from "../config";
+
+const worldId = getWorldId();
 
 export default function DataManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // DESCARGAR
   const handleExport = async () => {
-    const res = await fetch(`${API_URL}/cats/export`);
+    const res = await fetch(`${API_URL}/cats/export?worldId=${worldId}`);
     const data = await res.json();
 
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -33,7 +35,7 @@ export default function DataManager() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(json)
+      body: JSON.stringify({ ...json, worldId })
     });
 
     alert("Datos cargados correctamente");

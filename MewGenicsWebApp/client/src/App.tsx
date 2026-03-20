@@ -5,6 +5,7 @@ import Genealogy from "./pages/Genealogy";
 import CreateCat from "./pages/CreateCat";
 import DataManager from "./pages/DataManager";
 
+
 function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-900 text-white">

@@ -9,7 +9,9 @@ import {
 } from "d3-dag";
 
 import type { Cat, CatStatus } from "../Types/Cats";
-import { API_URL } from "../config";
+import { API_URL, getWorldId } from "../config";
+
+const worldId = getWorldId();
 
 const Genealogy: React.FC = () => {
     const [cats, setCats] = useState<Cat[]>([]);
@@ -20,7 +22,7 @@ const Genealogy: React.FC = () => {
     // FETCH
     useEffect(() => {
         const fetchCats = async () => {
-            const res = await fetch((`${API_URL}/cats`));
+            const res = await fetch((`${API_URL}/cats?worldId=${worldId}`));
             const data: Cat[] = await res.json();
             setCats(data);
         };
@@ -29,7 +31,7 @@ const Genealogy: React.FC = () => {
 
     // UPDATE STATUS
     const updateCatStatus = async (catId: number, newStatus: CatStatus) => {
-        await fetch(`${API_URL}/cats/${catId}`, {
+        await fetch(`${API_URL}/cats/${catId}?worldId=${worldId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: newStatus }),

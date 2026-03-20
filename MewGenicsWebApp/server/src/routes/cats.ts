@@ -5,7 +5,9 @@ import { catCreateSchema } from "../validators/cats";
 
 const router = Router();
 
-
+// Helpers
+const getWorldId = (req: any) =>
+    req.body?.worldId || req.query?.worldId;
 
 // Validaciones de género para padres
 const canBeMother = (cat: Cat) =>
@@ -16,6 +18,7 @@ const canBeFather = (cat: Cat) =>
 
 // Crear ruta post para crear un nuevo gato
 router.post("/", async (req, res) => {
+    const worldId = getWorldId(req);
 
     const parsed = catCreateSchema.safeParse(req.body);
 
@@ -33,15 +36,11 @@ router.post("/", async (req, res) => {
         stats
     } = parsed.data;
 
-    // Validacion basica
     if (motherId && fatherId && motherId === fatherId) {
-        return res.status(400).json({
-            error: "Parents must be different"
-        });
+        return res.status(400).json({ error: "Parents must be different" });
     }
 
     try {
-        // Validacion de existencia y género de padres
         const parentIds = [motherId, fatherId].filter(
             (id): id is number => typeof id === "number"
         );
@@ -52,62 +51,34 @@ router.post("/", async (req, res) => {
         if (parentIds.length > 0) {
             const parents = await prisma.cat.findMany({
                 where: {
-                    id: { in: parentIds }
+                    id: { in: parentIds },
+                    worldId
                 }
             });
 
-            mother = parents.find((p: Cat) => p.id === motherId);
-            father = parents.find((p: Cat) => p.id === fatherId);
+            mother = parents.find(p => p.id === motherId);
+            father = parents.find(p => p.id === fatherId);
 
-            if (motherId && !mother) {
-                return res.status(400).json({ error: "Mother not found" });
-            }
+            if (motherId && !mother) return res.status(400).json({ error: "Mother not found" });
+            if (fatherId && !father) return res.status(400).json({ error: "Father not found" });
 
-            if (fatherId && !father) {
-                return res.status(400).json({ error: "Father not found" });
-            }
-
-            if (mother && !canBeMother(mother)) {
-                return res.status(400).json({
-                    error: "Invalid mother"
-                });
-            }
-
-            if (father && !canBeFather(father)) {
-                return res.status(400).json({
-                    error: "Invalid father"
-                });
-            }
+            if (mother && !canBeMother(mother)) return res.status(400).json({ error: "Invalid mother" });
+            if (father && !canBeFather(father)) return res.status(400).json({ error: "Invalid father" });
         }
 
-        // Crear gato
         const newCat = await prisma.cat.create({
             data: {
                 name,
                 gender,
                 orientation,
                 color,
+                worldId,
                 inbreeding_level: 0,
                 status: "alive",
-
-                mother: motherId
-                    ? { connect: { id: motherId } }
-                    : undefined,
-
-                father: fatherId
-                    ? { connect: { id: fatherId } }
-                    : undefined,
-
+                mother: motherId ? { connect: { id: motherId } } : undefined,
+                father: fatherId ? { connect: { id: fatherId } } : undefined,
                 stats: {
-                    create: {
-                        strength: stats.strength,
-                        dexterity: stats.dexterity,
-                        constitution: stats.constitution,
-                        intelligence: stats.intelligence,
-                        agility: stats.agility,
-                        charisma: stats.charisma,
-                        luck: stats.luck
-                    }
+                    create: { ...stats }
                 }
             },
             include: {
@@ -126,7 +97,10 @@ router.post("/", async (req, res) => {
 
 // Obtener todos los gatos
 router.get("/", async (req, res) => {
+    const worldId = getWorldId(req);
+
     const cats = await prisma.cat.findMany({
+        where: { worldId },
         include: {
             stats: true,
             mother: true,
@@ -394,33 +368,19 @@ router.get("/export", async (req, res) => {
 
 // Subir Json valido
 router.post("/import", async (req, res) => {
-    const data = req.body;
+    const { worldId, data } = req.body;
 
     try {
         if (!Array.isArray(data)) {
             return res.status(400).json({ error: "Invalid format" });
         }
 
-        if (data.length > 500) {
-            return res.status(400).json({ error: "Too many cats" });
-        }
+        // 🔥 BORRAR SOLO DE ESE WORLD
+        await prisma.cat.deleteMany({
+            where: { worldId }
+        });
 
-        for (const cat of data) {
-            const parsed = catCreateSchema.safeParse(cat);
-
-            if (!parsed.success) {
-                return res.status(400).json({ error: "Invalid cat in JSON" });
-            }
-        }
-
-        // Borrar todo lo existente
-        await prisma.catAbility.deleteMany();
-        await prisma.catStats.deleteMany();
-        await prisma.cat.deleteMany();
-
-        // Crear nuevos registros
         const idMap = new Map<number, number>();
-
 
         for (const cat of data) {
             const created = await prisma.cat.create({
@@ -429,24 +389,18 @@ router.post("/import", async (req, res) => {
                     gender: cat.gender,
                     orientation: cat.orientation,
                     color: cat.color,
+                    worldId,
                     status: cat.status,
                     inbreeding_level: cat.inbreeding_level,
                     stats: {
-                        create: {
-                            strength: cat.stats.strength,
-                            dexterity: cat.stats.dexterity,
-                            constitution: cat.stats.constitution,
-                            intelligence: cat.stats.intelligence,
-                            agility: cat.stats.agility,
-                            charisma: cat.stats.charisma,
-                            luck: cat.stats.luck
-                        }
+                        create: { ...cat.stats }
                     }
                 }
             });
+
             idMap.set(cat.id, created.id);
         }
-        // Actualizar relaciones de padres e hijos
+
         for (const cat of data) {
             const newId = idMap.get(cat.id);
 
@@ -460,6 +414,7 @@ router.post("/import", async (req, res) => {
         }
 
         res.json({ success: true });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Import failed" });
@@ -498,11 +453,7 @@ router.get("/:id", async (req, res) => {
 router.put("/:id", async (req, res) => {
     const id = Number(req.params.id);
     const { status } = req.body;
-
-    if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: "Invalid ID" });
-    }
-
+    const worldId = getWorldId(req);
 
     if (!["alive", "retired", "dead"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
@@ -511,7 +462,7 @@ router.put("/:id", async (req, res) => {
     try {
         const updatedCat = await prisma.cat.update({
             where: { id },
-            data: { status },
+            data: { status }
         });
 
         res.json(updatedCat);
