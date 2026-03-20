@@ -421,6 +421,65 @@ router.post("/import", async (req, res) => {
     }
 });
 
+// Borrar un gato por ID (y romper relaciones)
+router.delete("/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    const worldId = String(req.query.worldId);
+
+    if (!Number.isInteger(id)) {
+        return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    if (!worldId) {
+        return res.status(400).json({ error: "Missing worldId" });
+    }
+
+    try {
+        // Verificar que el gato pertenece a ese mundo
+        const cat = await prisma.cat.findFirst({
+            where: {
+                id,
+                worldId
+            }
+        });
+
+        if (!cat) {
+            return res.status(404).json({ error: "Cat not found" });
+        }
+
+        // romper relaciones antes de borrar
+        await prisma.cat.updateMany({
+            where: {
+                OR: [
+                    { motherId: id },
+                    { fatherId: id }
+                ],
+                worldId
+            },
+            data: {
+                motherId: null,
+                fatherId: null
+            }
+        });
+
+        // borrar stats primero si hace falta
+        await prisma.catStats.deleteMany({
+            where: { id }
+        });
+
+        // borrar gato
+        await prisma.cat.delete({
+            where: { id }
+        });
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to delete cat" });
+    }
+});
+
 // Obtener gato por ID
 router.get("/:id", async (req, res) => {
     const id = Number(req.params.id);

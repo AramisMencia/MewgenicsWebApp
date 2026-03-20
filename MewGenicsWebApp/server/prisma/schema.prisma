@@ -37,7 +37,7 @@ model Cat {
 
 model CatStats {
   id           Int  @id @default(autoincrement())
-  cat          Cat  @relation(fields: [cat_id], references: [id])
+  cat          Cat  @relation(fields: [cat_id], references: [id], onDelete: Cascade)
   cat_id       Int  @unique
 
   strength      Int

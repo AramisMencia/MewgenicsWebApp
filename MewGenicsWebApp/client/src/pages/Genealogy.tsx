@@ -44,6 +44,27 @@ const Genealogy: React.FC = () => {
         );
     };
 
+    // DELETE CAT
+    const deleteCat = async (catId: number) => {
+        try {
+            const res = await fetch(`/api/cats/${catId}?worldId=${worldId}`, {
+                method: "DELETE",
+            });
+
+            if (!res.ok) throw new Error("Failed to delete cat");
+
+            // 🔄 RE-FETCH (clave)
+            const updated = await fetch(`/api/cats?worldId=${worldId}`);
+            const data: Cat[] = await updated.json();
+
+            setCats(data);
+
+        } catch (error) {
+            console.error(error);
+            alert("Error deleting cat");
+        }
+    };
+
     useEffect(() => {
         if (!cats.length || !svgRef.current) return;
 
@@ -196,6 +217,24 @@ const Genealogy: React.FC = () => {
                 .attr("value", d => d)
                 .text(d => d)
                 .property("selected", d => d === cat.status);
+
+            group.append("foreignObject")
+                .attr("x", nodeWidth / 2 - 20)
+                .attr("y", -nodeHeight / 2 + 5)
+                .attr("width", 20)
+                .attr("height", 20)
+                .append("xhtml:button")
+                .text("✕")
+                .attr("class", "bg-red-600 text-white text-xs rounded hover:bg-red-700 w-full h-full")
+                .style("font-size", "10px")
+                .on("click", (event: Event) => {
+                    event.stopPropagation();
+
+                    const confirmDelete = confirm(`Delete ${cat.name}?`);
+                    if (!confirmDelete) return;
+                    group.style("opacity", 0.3);
+                    deleteCat(cat.id);
+                })
         });
 
         // Zoom + Drag
