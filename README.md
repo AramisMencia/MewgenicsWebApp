@@ -29,12 +29,12 @@ Visualización interactiva en forma de grafo:
 ### Matchmaking
 Evaluación de cruces con filtros:
 
--Sistema de scoring basado en:
+- Sistema de scoring basado en:
  * Mejora de estadísticas
  * Diversidad genética
  * Compatibilidad
 
--Filtros:
+- Filtros:
 * Evitar mismo género
 * Evitar parentesco (configurable)
 * Priorizar atributos específicos según objetivo del jugador
