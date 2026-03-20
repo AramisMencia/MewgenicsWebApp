@@ -424,7 +424,7 @@ router.post("/import", async (req, res) => {
 // Borrar un gato por ID (y romper relaciones)
 router.delete("/:id", async (req, res) => {
     const id = Number(req.params.id);
-    const worldId = String(req.query.worldId);
+    const worldId = getWorldId(req);
 
     if (!Number.isInteger(id)) {
         return res.status(400).json({ error: "Invalid ID" });
