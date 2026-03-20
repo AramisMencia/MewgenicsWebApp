@@ -15,6 +15,7 @@ const Genealogy: React.FC = () => {
     const [cats, setCats] = useState<Cat[]>([]);
     const svgRef = useRef<SVGSVGElement | null>(null);
     const zoomRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
+    console.log("API_URL:", API_URL);
 
     // FETCH
     useEffect(() => {
